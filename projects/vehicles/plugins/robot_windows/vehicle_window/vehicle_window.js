@@ -314,6 +314,16 @@ function configure(data) {
   // Sort the deviceTypes alphabetically.
   deviceTypes.sort(alphabetical);
 
+  // Vehicle stuff
+  addDeviceType('Vehicle');
+  addDevice({'name': 'Overview', 'type': 'Vehicle'});
+  addDevice({'name': 'Speed', 'type': 'Vehicle'});
+  addDevice({'name': 'Steering', 'type': 'Vehicle'});
+  addDevice({'name': 'Encoders', 'type': 'Vehicle'});
+  addDevice({'name': 'Brake', 'type': 'Vehicle'});
+  addDevice({'name': 'Throttle', 'type': 'Vehicle'});
+  addDevice({'name': 'RPM', 'type': 'Vehicle'});
+
   // Create a device type container per device types.
   deviceTypes.forEach(function(deviceType) {
     addDeviceType(deviceType);
