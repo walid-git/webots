@@ -271,7 +271,7 @@ PROTO Car [
     wheelRearRight IS wheelRearRight
     wheelRearLeft IS wheelRearLeft
     customData %{= customData }%
-    window "automobile_window"
+    window "vehicle_window"
     axisDevicesFrontRight [
     %{ if type == "traction" or type == "4x4" then }%
       RotationalMotor {
