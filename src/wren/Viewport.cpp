@@ -286,7 +286,12 @@ void wr_viewport_delete(WrViewport *viewport) {
 }
 
 void wr_viewport_set_clear_color_rgb(WrViewport *viewport, const float *color) {
-  glm::vec4 clearColor(glm::make_vec3(color), 1.0);
+  const float c[] = {
+    color[0] * 200,
+    color[1] * 200,
+    color[2] * 200,
+  };
+  glm::vec4 clearColor(glm::make_vec3(c), 1.0);
   reinterpret_cast<wren::Viewport *>(viewport)->setClearColor(clearColor);
 }
 

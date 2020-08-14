@@ -124,19 +124,7 @@ void main() {
   // rectify the spherical transform
   if (rangeCamera > 0) {
     float depth = fragColor.x;
-    if (depth < maxRange) {
-      float cosine = 0.0f;
-      for (int i = 0; i < 6; ++i) {
-        float cosineTmp = dot(normalizedCoord3d, orientations[i]);
-        cosineTmp = cosineTmp / length(normalizedCoord3d);
-        if (cosineTmp > cosine)
-          cosine = cosineTmp;
-      }
-      depth = depth / cosine;
-    }
-    if (depth < minRange)
-      depth = maxRange;
 
-    fragColor = vec4(clamp(depth, 0.0, maxRange), 0.0, 0.0, 0.0);
+    fragColor = vec4(depth, 0.0, 0.0, 0.0);
   }
 }
