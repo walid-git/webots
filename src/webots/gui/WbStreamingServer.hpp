@@ -20,6 +20,7 @@
 #include <QtCore/QList>
 
 #include "WbLog.hpp"
+#include "WbTransportServerWebsocket.hpp"
 
 class QTcpSocket;
 class QWebSocket;
@@ -94,6 +95,7 @@ private:
   bool isControllerMessageIgnored(const QString &pattern, const QString &message) const;
 
   QWebSocketServer *mWebSocketServer;
+  WbTransportServerWebsocket *mTransportServer;
   WbStreamingTcpServer *mTcpServer;
   QStringList mEditableControllers;
   qint64 mLastUpdateTime;

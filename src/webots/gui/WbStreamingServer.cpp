@@ -106,8 +106,7 @@ void WbStreamingServer::create(int port) {
 
   // Reference to let live QTcpSocket and QWebSocketServer on the same port using `QWebSocketServer::handleConnection()`:
   // - https://bugreports.qt.io/browse/QTBUG-54276
-  QWebSocketServer::SslMode sslMode = mSsl ? QWebSocketServer::SecureMode : QWebSocketServer::NonSecureMode;
-  mWebSocketServer = new QWebSocketServer("Webots Streaming Server", sslMode, this);
+  mTransportServer = new WbTransportServerWebsocket(mSsl);
   mTcpServer = new WbStreamingTcpServer();
   if (mSsl) {
     QSslConfiguration sslConfiguration;
@@ -120,7 +119,7 @@ void WbStreamingServer::create(int port) {
       QSslCertificate::fromPath(WbStandardPaths::resourcesWebPath() + "server/ssl/cert.pem");
     sslConfiguration.setLocalCertificateChain(localCertificateChain);
     sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
-    mWebSocketServer->setSslConfiguration(sslConfiguration);
+    mTransportServer->setSslConfiguration(sslConfiguration);
     mTcpServer->setSslConfiguration(sslConfiguration);
   }
   if (!mTcpServer->listen(QHostAddress::Any, port))
