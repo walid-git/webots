@@ -450,6 +450,8 @@ QT_SOURCES += \
   WbVideoRecorder.cpp \
   WbVideoRecorderDialog.cpp \
   WbMultimediaStreamingServer.cpp \
+  WbTransportClientWebsocket.cpp \
+  WbTransportServerWebsocket.cpp \
   WbViewpoint.cpp \
   WbView3D.cpp \
   WbVisualBoundingSphere.cpp \

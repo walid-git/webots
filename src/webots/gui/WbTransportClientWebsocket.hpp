@@ -15,11 +15,13 @@
 #ifndef WB_TRANSPORT_CLIENT_WEBSOCKET_HPP
 #define WB_TRANSPORT_CLIENT_WEBSOCKET_HPP
 
-#include "WbTransportClient.hpp"
+#include <QtCore/QObject>
 
 class QWebSocket;
 
-class WbTransportClientWebsocket : public WbTransportClient {
+class WbTransportClientWebsocket : public QObject {
+  Q_OBJECT
+
 signals:
   void textMessageReceived(const QString &message);
   void disconnected();
