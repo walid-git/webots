@@ -17,3 +17,15 @@ WbTransportServerWebsocket::WbTransportServerWebsocket(bool ssl) {
 void WbTransportServerWebsocket::setSslConfiguration(QSslConfiguration sslConfiguration) {
   mServer->setSslConfiguration(sslConfiguration);
 };
+
+void WbTransportServerWebsocket::propagateNewConnection() {
+  emit newConnection();
+}
+
+WbTransportServerWebsocket::WbTransportServerWebsocket() {
+  connect(mServer, &QWebSocketServer::newConnection, this, &WbTransportServerWebsocket::propagateNewConnection);
+}
+
+void WbTransportServerWebsocket::close() {
+  mServer->close();
+}

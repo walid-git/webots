@@ -65,7 +65,7 @@ WbStreamingServer::~WbStreamingServer() {
   WbLog::info(tr("Streaming server closed"));
 };
 
-QString WbStreamingServer::clientToId(QWebSocket *client) {
+QString WbStreamingServer::clientToId(WbTransportClientWebsocket *client) {
   return QString::number((quintptr)client);
 }
 
@@ -106,9 +106,7 @@ void WbStreamingServer::create(int port) {
 
   // Reference to let live QTcpSocket and QWebSocketServer on the same port using `QWebSocketServer::handleConnection()`:
   // - https://bugreports.qt.io/browse/QTBUG-54276
-  // mTransportServer = new WbTransportServerWebsocket(mSsl);
-  QWebSocketServer::SslMode sslMode = mSsl ? QWebSocketServer::SecureMode : QWebSocketServer::NonSecureMode;
-  mWebSocketServer = new QWebSocketServer("Webots Streaming Server", sslMode, this);
+  mTransportServer = new WbTransportServerWebsocket(mSsl);
   mTcpServer = new WbStreamingTcpServer();
   if (mSsl) {
     QSslConfiguration sslConfiguration;
@@ -121,12 +119,12 @@ void WbStreamingServer::create(int port) {
       QSslCertificate::fromPath(WbStandardPaths::resourcesWebPath() + "server/ssl/cert.pem");
     sslConfiguration.setLocalCertificateChain(localCertificateChain);
     sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
-    mWebSocketServer->setSslConfiguration(sslConfiguration);
+    mTransportServer->setSslConfiguration(sslConfiguration);
     mTcpServer->setSslConfiguration(sslConfiguration);
   }
   if (!mTcpServer->listen(QHostAddress::Any, port))
     throw tr("Cannot set the server in listen mode: %1").arg(mTcpServer->errorString());
-  connect(mWebSocketServer, &QWebSocketServer::newConnection, this, &WbStreamingServer::onNewWebSocketConnection);
+  connect(mTransportServer, &WbTransportServerWebsocket::newConnection, this, &WbStreamingServer::onNewWebSocketConnection);
   connect(mTcpServer, &WbStreamingTcpServer::newConnection, this, &WbStreamingServer::onNewTcpConnection);
   connect(WbSimulationState::instance(), &WbSimulationState::controllerReadRequestsCompleted, this,
           &WbStreamingServer::sendUpdatePackageToClients, Qt::UniqueConnection);
@@ -139,8 +137,8 @@ void WbStreamingServer::destroy() {
              &WbStreamingServer::sendUpdatePackageToClients);
   disconnect(WbLog::instance(), &WbLog::logEmitted, this, &WbStreamingServer::propagateWebotsLogToClients);
 
-  if (mWebSocketServer)
-    mWebSocketServer->close();
+  if (mTransportServer)
+    mTransportServer->close();
 
   foreach (QWebSocket *client, mWebSocketClients) {
     disconnect(client, &QWebSocket::textMessageReceived, this, &WbStreamingServer::processTextMessage);
@@ -149,8 +147,8 @@ void WbStreamingServer::destroy() {
   qDeleteAll(mWebSocketClients);
   mWebSocketClients.clear();
 
-  delete mWebSocketServer;
-  mWebSocketServer = NULL;
+  delete mTransportServer;
+  mTransportServer = NULL;
 
   delete mTcpServer;
   mTcpServer = NULL;
@@ -177,11 +175,11 @@ void WbStreamingServer::onNewTcpData() {
 }
 
 void WbStreamingServer::onNewWebSocketConnection() {
-  QWebSocket *client = mWebSocketServer->nextPendingConnection();
+  WbTransportClientWebsocket *client = mTransportServer->nextPendingConnection();
   if (client) {
-    connect(client, &QWebSocket::textMessageReceived, this, &WbStreamingServer::processTextMessage);
-    connect(client, &QWebSocket::disconnected, this, &WbStreamingServer::socketDisconnected);
-    mWebSocketClients << client;
+    connect(client, &WbTransportClientWebsocket::textMessageReceived, this, &WbStreamingServer::processTextMessage);
+    connect(client, &WbTransportClientWebsocket::disconnected, this, &WbStreamingServer::socketDisconnected);
+    mTransportClients << client;
     WbLog::info(
       tr("Streaming server: New client [%1] (%2 connected client(s)).").arg(clientToId(client)).arg(mWebSocketClients.size()));
     sendToClients();  // send possible bufferized messages
@@ -377,23 +375,23 @@ bool WbStreamingServer::isControllerEditAllowed(const QString &controller) {
 }
 
 void WbStreamingServer::socketDisconnected() {
-  QWebSocket *client = qobject_cast<QWebSocket *>(sender());
+  WbTransportClientWebsocket *client = qobject_cast<WbTransportClientWebsocket *>(sender());
   if (client) {
-    mWebSocketClients.removeAll(client);
+    mTransportClients.removeAll(client);
     client->deleteLater();
     WbLog::info(tr("Streaming server: Client disconnected [%1] (remains %2 client(s)).")
                   .arg(clientToId(client))
-                  .arg(mWebSocketClients.size()));
+                  .arg(mTransportClients.size()));
   }
 }
 
 void WbStreamingServer::sendUpdatePackageToClients() {
   sendActivityPulse();
 
-  if (mWebSocketClients.size() > 0) {
+  if (mTransportClients.size() > 0) {
     const qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
     if (mLastUpdateTime < 0.0 || currentTime - mLastUpdateTime >= 1000.0 / WbWorld::instance()->worldInfo()->fps()) {
-      foreach (QWebSocket *client, mWebSocketClients)
+      foreach (WbTransportClientWebsocket *client, mTransportClients)
         pauseClientIfNeeded(client);
       mLastUpdateTime = currentTime;
     }
@@ -501,7 +499,7 @@ bool WbStreamingServer::prepareWorld() {
 }
 
 void WbStreamingServer::newWorld() {
-  if (mWebSocketServer == NULL)
+  if (mTransportServer == NULL)
     return;
 
   if (mMonitorActivity) {
@@ -515,7 +513,7 @@ void WbStreamingServer::newWorld() {
 }
 
 void WbStreamingServer::deleteWorld() {
-  if (mWebSocketServer == NULL)
+  if (mTransportServer == NULL)
     return;
   foreach (QWebSocket *client, mWebSocketClients)
     client->sendTextMessage("delete world");
@@ -538,7 +536,7 @@ void WbStreamingServer::setWorldLoadingProgress(const int progress) {
 }
 
 void WbStreamingServer::propagateNodeAddition(WbNode *node) {
-  if (mWebSocketServer == NULL || WbWorld::instance() == NULL)
+  if (mTransportServer == NULL || WbWorld::instance() == NULL)
     return;
 
   if (node->isProtoParameterNode()) {
@@ -571,7 +569,7 @@ QString WbStreamingServer::simulationStateString() {
 }
 
 void WbStreamingServer::propagateSimulationStateChange() const {
-  if (mWebSocketServer == NULL || WbWorld::instance() == NULL || mWebSocketClients.isEmpty())
+  if (mTransportServer == NULL || WbWorld::instance() == NULL || mWebSocketClients.isEmpty())
     return;
 
   QString message = simulationStateString();

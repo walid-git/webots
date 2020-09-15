@@ -67,9 +67,10 @@ protected:
   void pauseClientIfNeeded(QWebSocket *client);
 
   QList<QWebSocket *> mWebSocketClients;
+  QList<WbTransportClientWebsocket *> mTransportClients;
   double mPauseTimeout;
 
-  static QString clientToId(QWebSocket *client);
+  static QString clientToId(WbTransportClientWebsocket *client);
   static QString simulationStateString();
   static WbMainWindow *cMainWindow;
 

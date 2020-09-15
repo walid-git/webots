@@ -24,10 +24,19 @@ class QWebSocketServer;
 class QSslConfiguration;
 
 class WbTransportServerWebsocket : public QObject {
+  Q_OBJECT
+
+signals:
+  void newConnection();
+private slots:
+  void propagateNewConnection();
+
 public:
   WbTransportClientWebsocket *nextPendingConnection();
   WbTransportServerWebsocket(bool ssl);
   void setSslConfiguration(QSslConfiguration sslConfiguration);
+  void close();
+  WbTransportServerWebsocket();
 
 private:
   QWebSocketServer *mServer;
