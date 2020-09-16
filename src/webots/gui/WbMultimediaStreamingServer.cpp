@@ -28,6 +28,7 @@
 #include <QtCore/QBuffer>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QUrlQuery>
 #include <QtGui/QMouseEvent>
 #include <QtWebSockets/QWebSocket>
 
@@ -68,11 +69,36 @@ void WbMultimediaStreamingServer::start(int port) {
 }
 
 void WbMultimediaStreamingServer::sendTcpRequestReply(const QString &requestedUrl, QTcpSocket *socket) {
-  if (requestedUrl != "mjpeg")
+  if (requestedUrl.indexOf("mjpeg") != 0)
     return;
 
   if (!mLimiter)
     mLimiter = new WbMultimediaStreamingLimiter(QSize(mImageWidth, mImageHeight), 50);
+
+  if (requestedUrl.indexOf("polling") > 0) {
+    // sendLastImage(socket);
+    QUrl url(requestedUrl);
+    QUrlQuery query(url);
+
+    if (query.queryItemValue("width") != "" && query.queryItemValue("height") != "") {
+      mImageWidth = query.queryItemValue("width").toInt();
+      mImageHeight = query.queryItemValue("height").toInt();
+      cMainWindow->setView3DSize(QSize(mImageWidth, mImageHeight));
+    }
+
+    static const QByteArray &contentType =
+      QString(
+        "HTTP/1.0 200 OK\r\nServer: Webots\r\nConnection: close\r\nContent-Type: image/jpeg\r\nContent-Length: %1\r\n\r\n")
+        .arg(mSceneImage.length())
+        .toUtf8();
+    socket->write(contentType);
+    socket->write(mSceneImage);
+    socket->write(QByteArray("\r\n"));
+    socket->flush();
+    socket->waitForBytesWritten(3000);
+    socket->close();
+    return;
+  }
 
   socket->readAll();
 
