@@ -34,6 +34,7 @@ public:
   qint64 sendTextMessage(const QString &message);
   void setWebSocketClient(QWebSocket *client);
   WbTransportClientWebsocket(QWebSocket *client) { mClient = client; };
+  bool flush();
 
 private:
   QWebSocket *mClient;

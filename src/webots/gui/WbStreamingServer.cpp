@@ -140,12 +140,12 @@ void WbStreamingServer::destroy() {
   if (mTransportServer)
     mTransportServer->close();
 
-  foreach (QWebSocket *client, mWebSocketClients) {
-    disconnect(client, &QWebSocket::textMessageReceived, this, &WbStreamingServer::processTextMessage);
-    disconnect(client, &QWebSocket::disconnected, this, &WbStreamingServer::socketDisconnected);
+  foreach (WbTransportClientWebsocket *client, mTransportClients) {
+    disconnect(client, &WbTransportClientWebsocket::textMessageReceived, this, &WbStreamingServer::processTextMessage);
+    disconnect(client, &WbTransportClientWebsocket::disconnected, this, &WbStreamingServer::socketDisconnected);
   };
-  qDeleteAll(mWebSocketClients);
-  mWebSocketClients.clear();
+  qDeleteAll(mTransportClients);
+  mTransportClients.clear();
 
   delete mTransportServer;
   mTransportServer = NULL;
@@ -186,7 +186,7 @@ void WbStreamingServer::onNewWebSocketConnection() {
   }
 }
 
-void WbStreamingServer::sendFileToClient(QWebSocket *client, const QString &type, const QString &folder, const QString &path,
+void WbStreamingServer::sendFileToClient(WbTransportClientWebsocket *client, const QString &type, const QString &folder, const QString &path,
                                          const QString &filename) {
   QFile file(path + "/" + filename);
   if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -206,7 +206,7 @@ void WbStreamingServer::sendFileToClient(QWebSocket *client, const QString &type
 }
 
 void WbStreamingServer::processTextMessage(QString message) {
-  QWebSocket *client = qobject_cast<QWebSocket *>(sender());
+  WbTransportClientWebsocket *client = qobject_cast<WbTransportClientWebsocket *>(sender());
 
   if (message.startsWith("robot:")) {
     QString name;
@@ -459,9 +459,9 @@ void WbStreamingServer::sendToClients(const QString &message) {
     mMessageToClients = message;
   } else if (!message.isEmpty())
     mMessageToClients += "\n" + message;
-  if (mWebSocketClients.isEmpty())
+  if (mTransportClients.isEmpty())
     return;
-  foreach (QWebSocket *client, mWebSocketClients)
+  foreach (WbTransportClientWebsocket *client, mTransportClients)
     client->sendTextMessage(mMessageToClients);
   mMessageToClients = "";
 }
@@ -487,7 +487,7 @@ void WbStreamingServer::connectNewRobot(const WbRobot *robot) {
 
 bool WbStreamingServer::prepareWorld() {
   try {
-    foreach (QWebSocket *client, mWebSocketClients)
+    foreach (WbTransportClientWebsocket *client, mTransportClients)
       sendWorldToClient(client);
   } catch (const QString &e) {
     WbLog::error(tr("Error when reloading world: %1.").arg(e));
@@ -515,7 +515,7 @@ void WbStreamingServer::newWorld() {
 void WbStreamingServer::deleteWorld() {
   if (mTransportServer == NULL)
     return;
-  foreach (QWebSocket *client, mWebSocketClients)
+  foreach (WbTransportClientWebsocket *client, mTransportClients)
     client->sendTextMessage("delete world");
   mEditableControllers.clear();
 }
@@ -529,7 +529,7 @@ void WbStreamingServer::resetSimulation() {
 }
 
 void WbStreamingServer::setWorldLoadingProgress(const int progress) {
-  foreach (QWebSocket *client, mWebSocketClients) {
+  foreach (WbTransportClientWebsocket *client, mTransportClients) {
     client->sendTextMessage("loading:" + mCurrentWorldLoadingStatus + ":" + QString::number(progress));
     client->flush();
   }
@@ -569,7 +569,7 @@ QString WbStreamingServer::simulationStateString() {
 }
 
 void WbStreamingServer::propagateSimulationStateChange() const {
-  if (mTransportServer == NULL || WbWorld::instance() == NULL || mWebSocketClients.isEmpty())
+  if (mTransportServer == NULL || WbWorld::instance() == NULL || mTransportClients.isEmpty())
     return;
 
   QString message = simulationStateString();
@@ -577,11 +577,11 @@ void WbStreamingServer::propagateSimulationStateChange() const {
     return;
   if (message == "pause")
     message = QString("pause: %1").arg(WbSimulationState::instance()->time());
-  foreach (QWebSocket *client, mWebSocketClients)
+  foreach (WbTransportClientWebsocket *client, mTransportClients)
     client->sendTextMessage(message);
 }
 
-void WbStreamingServer::pauseClientIfNeeded(QWebSocket *client) {
+void WbStreamingServer::pauseClientIfNeeded(WbTransportClientWebsocket *client) {
   if (mPauseTimeout < 0 || WbSimulationState::instance()->time() < mPauseTimeout)
     return;
 
@@ -595,7 +595,7 @@ void WbStreamingServer::pauseClientIfNeeded(QWebSocket *client) {
   fflush(stdout);
 }
 
-void WbStreamingServer::sendWorldToClient(QWebSocket *client) {
+void WbStreamingServer::sendWorldToClient(WbTransportClientWebsocket *client) {
   const WbWorld *world = WbWorld::instance();
   const QDir dir = QFileInfo(world->fileName()).dir();
   const QStringList worldList = dir.entryList(QStringList() << "*.wbt", QDir::Files);

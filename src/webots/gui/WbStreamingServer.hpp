@@ -55,7 +55,7 @@ protected:
   virtual void stop();
   virtual bool prepareWorld();
   virtual void connectNewRobot(const WbRobot *robot);
-  virtual void sendWorldToClient(QWebSocket *client);
+  virtual void sendWorldToClient(WbTransportClientWebsocket *client);
   virtual void sendTcpRequestReply(const QString &requestedUrl, QTcpSocket *socket) = 0;
 
   bool isActive() const { return mWebSocketServer != NULL; }
@@ -64,7 +64,7 @@ protected:
   void computeEditableControllers();
   void sendToClients(const QString &message = "");
   void sendActivityPulse() const;
-  void pauseClientIfNeeded(QWebSocket *client);
+  void pauseClientIfNeeded(WbTransportClientWebsocket *client);
 
   QList<QWebSocket *> mWebSocketClients;
   QList<WbTransportClientWebsocket *> mTransportClients;
@@ -89,9 +89,9 @@ private slots:
 private:
   void toggleAction(bool serverIsCreated);
   bool isControllerEditAllowed(const QString &controller);
-  void sendFileToClient(QWebSocket *client, const QString &type, const QString &folder, const QString &path,
+  void sendFileToClient(WbTransportClientWebsocket *client, const QString &type, const QString &folder, const QString &path,
                         const QString &filename);
-  void sendWorldStateToClient(QWebSocket *client, const QString &state);
+  void sendWorldStateToClient(WbTransportClientWebsocket *client, const QString &state);
   void propagateLogToClients(WbLog::Level level, const QString &message);
   bool isControllerMessageIgnored(const QString &pattern, const QString &message) const;
 

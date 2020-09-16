@@ -229,7 +229,7 @@ void WbMultimediaStreamingServer::sendContextMenuInfo(const WbMatter *node) {
 }
 
 void WbMultimediaStreamingServer::processTextMessage(QString message) {
-  QWebSocket *client = qobject_cast<QWebSocket *>(sender());
+  WbTransportClientWebsocket *client = qobject_cast<WbTransportClientWebsocket *>(sender());
   if (mFullResolutionOnPause == 2)
     mFullResolutionOnPause = 1;
 
@@ -348,9 +348,9 @@ void WbMultimediaStreamingServer::processTextMessage(QString message) {
     const int width = resolution[0].toInt();
     const int height = resolution[1].toInt();
     WbLog::info(
-      tr("Streaming server: New client [%1] (%2 connected client(s)).").arg(clientToId(client)).arg(mWebSocketClients.size()));
+      tr("Streaming server: New client [%1] (%2 connected client(s)).").arg(clientToId(client)).arg(mTransportClients.size()));
     QString args;
-    if ((mImageWidth <= 0 && mImageHeight <= 0) || client == mWebSocketClients.first()) {
+    if ((mImageWidth <= 0 && mImageHeight <= 0) || client == mTransportClients.first()) {
       cMainWindow->setView3DSize(QSize(width, height));
       mImageWidth = width;
       mImageHeight = height;
@@ -368,7 +368,7 @@ void WbMultimediaStreamingServer::processTextMessage(QString message) {
       client->sendTextMessage(stateMessage);
     sendWorldToClient(client);
   } else if (message.startsWith("resize: ")) {
-    if (client == mWebSocketClients.first()) {
+    if (client == mTransportClients.first()) {
       const QStringList &resolution = message.mid(8).split("x");
       mImageWidth = resolution[0].toInt();
       mImageHeight = resolution[1].toInt();

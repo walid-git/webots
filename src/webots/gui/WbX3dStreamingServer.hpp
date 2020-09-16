@@ -42,11 +42,11 @@ private:
   void connectNewRobot(const WbRobot *robot) override;
   bool prepareWorld() override;
   void deleteWorld() override;
-  void sendWorldToClient(QWebSocket *client) override;
+  void sendWorldToClient(WbTransportClientWebsocket *client) override;
 
-  void startX3dStreaming(QWebSocket *client);
+  void startX3dStreaming(WbTransportClientWebsocket *client);
   void generateX3dWorld();
-  void sendWorldStateToClient(QWebSocket *client, const QString &state) const;
+  void sendWorldStateToClient(WbTransportClientWebsocket *client, const QString &state) const;
 
   QString mX3dWorld;
   QHash<QString, QString> mX3dWorldTextures;

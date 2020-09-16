@@ -11,3 +11,7 @@ void WbTransportClientWebsocket::setWebSocketClient(QWebSocket *client) {
 qint64 WbTransportClientWebsocket::sendTextMessage(const QString &message) {
   return mClient->sendTextMessage(message);
 }
+
+bool WbTransportClientWebsocket::flush() {
+  return mClient->flush();
+}

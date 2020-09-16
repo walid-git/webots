@@ -79,7 +79,7 @@ void WbX3dStreamingServer::sendTcpRequestReply(const QString &requestedUrl, QTcp
 
 void WbX3dStreamingServer::processTextMessage(QString message) {
   if (message.startsWith("x3d")) {
-    QWebSocket *client = qobject_cast<QWebSocket *>(sender());
+    WbTransportClientWebsocket *client = qobject_cast<WbTransportClientWebsocket *>(sender());
     WbLog::info(tr("Streaming server: Client set mode to: X3D."));
     mPauseTimeout = message.endsWith(";broadcast") ? -1 : 0;
     if (!WbWorld::instance()->isLoading())
@@ -88,13 +88,13 @@ void WbX3dStreamingServer::processTextMessage(QString message) {
     return;
   } else if (message == "reset") {
     // reset nodes visibility
-    QWebSocket *client = qobject_cast<QWebSocket *>(sender());
+    WbTransportClientWebsocket *client = qobject_cast<WbTransportClientWebsocket *>(sender());
     foreach (WbBaseNode *node, WbWorld::instance()->viewpoint()->getInvisibleNodes())
       client->sendTextMessage(QString("visibility:%1:1").arg(node->uniqueId()));
     resetSimulation();
     const QString &state = WbAnimationRecorder::instance()->computeUpdateData(true);
     if (!state.isEmpty()) {
-      foreach (QWebSocket *client, mWebSocketClients)
+      foreach (WbTransportClientWebsocket *client, mTransportClients)
         sendWorldStateToClient(client, state);
     }
     sendToClients("reset finished");
@@ -103,7 +103,7 @@ void WbX3dStreamingServer::processTextMessage(QString message) {
   WbStreamingServer::processTextMessage(message);
 }
 
-void WbX3dStreamingServer::startX3dStreaming(QWebSocket *client) {
+void WbX3dStreamingServer::startX3dStreaming(WbTransportClientWebsocket *client) {
   try {
     if (WbWorld::instance()->isModified() || mX3dWorldGenerationTime != WbSimulationState::instance()->time())
       generateX3dWorld();
@@ -113,7 +113,7 @@ void WbX3dStreamingServer::startX3dStreaming(QWebSocket *client) {
     if (!stateMessage.isEmpty())
       client->sendTextMessage(stateMessage);
     WbLog::info(
-      tr("Streaming server: New client [%1] (%2 connected client(s)).").arg(clientToId(client)).arg(mWebSocketClients.size()));
+      tr("Streaming server: New client [%1] (%2 connected client(s)).").arg(clientToId(client)).arg(mTransportClients.size()));
   } catch (const QString &e) {
     WbLog::error(tr("Streaming server: Cannot send world date to client [%1] because: %2.").arg(clientToId(client)).arg(e));
   }
@@ -122,12 +122,12 @@ void WbX3dStreamingServer::startX3dStreaming(QWebSocket *client) {
 void WbX3dStreamingServer::sendUpdatePackageToClients() {
   sendActivityPulse();
 
-  if (mWebSocketClients.size() > 0) {
+  if (mTransportClients.size() > 0) {
     const qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
     if (mLastUpdateTime < 0.0 || currentTime - mLastUpdateTime >= 1000.0 / WbWorld::instance()->worldInfo()->fps()) {
       const QString &state = WbAnimationRecorder::instance()->computeUpdateData(false);
       if (!state.isEmpty()) {
-        foreach (QWebSocket *client, mWebSocketClients) {
+        foreach (WbTransportClientWebsocket *client, mTransportClients) {
           sendWorldStateToClient(client, state);
           pauseClientIfNeeded(client);
         }
@@ -152,7 +152,7 @@ bool WbX3dStreamingServer::prepareWorld() {
     }
     if (regenerationRequired)
       generateX3dWorld();
-    foreach (QWebSocket *client, mWebSocketClients)
+    foreach (WbTransportClientWebsocket *client, mTransportClients)
       sendWorldToClient(client);
     WbAnimationRecorder::instance()->initFromStreamingServer();
   } catch (const QString &e) {
@@ -196,11 +196,11 @@ void WbX3dStreamingServer::propagateNodeAddition(WbNode *node) {
   if (baseNode && baseNode->isInBoundingObject())
     return;
 
-  if (!mWebSocketClients.isEmpty()) {
+  if (!mTransportClients.isEmpty()) {
     QString nodeString;
     WbVrmlWriter writer(&nodeString, node->modelName() + ".x3d");
     node->write(writer);
-    foreach (QWebSocket *client, mWebSocketClients)
+    foreach (WbTransportClientWebsocket *client, mTransportClients)
       // add root <nodes> element to handle correctly multiple root elements like in case of PBRAppearance node.
       client->sendTextMessage(QString("node:%1:<nodes>%2</nodes>").arg(node->parentNode()->uniqueId()).arg(nodeString));
   }
@@ -210,7 +210,7 @@ void WbX3dStreamingServer::propagateNodeDeletion(WbNode *node) {
   if (!isActive() || WbWorld::instance() == NULL)
     return;
 
-  foreach (QWebSocket *client, mWebSocketClients)
+  foreach (WbTransportClientWebsocket *client, mTransportClients)
     client->sendTextMessage(QString("delete:%1").arg(node->uniqueId()));
 }
 
@@ -229,7 +229,7 @@ void WbX3dStreamingServer::generateX3dWorld() {
   mLastUpdateTime = -1.0;
 }
 
-void WbX3dStreamingServer::sendWorldToClient(QWebSocket *client) {
+void WbX3dStreamingServer::sendWorldToClient(WbTransportClientWebsocket *client) {
   const qint64 ret = client->sendTextMessage(QString("model:") + mX3dWorld);
   if (ret < mX3dWorld.size())
     throw tr("Cannot sent the entire world");
@@ -249,7 +249,7 @@ void WbX3dStreamingServer::sendWorldToClient(QWebSocket *client) {
   WbStreamingServer::sendWorldToClient(client);
 }
 
-void WbX3dStreamingServer::sendWorldStateToClient(QWebSocket *client, const QString &state) const {
+void WbX3dStreamingServer::sendWorldStateToClient(WbTransportClientWebsocket *client, const QString &state) const {
   client->sendTextMessage(QString("application/json:") + state);
 }
 
