@@ -1040,7 +1040,7 @@ Robot {
 }
 ```
 
-And if the controller's name is *"demo"*, then this sample controller code:
+And if the controller's name is *"Arguments"*, then this sample controller code:
 
 %tab-component "language"
 %tab "C"
@@ -1115,7 +1115,7 @@ public class Arguments {
 This will print:
 
 ```
-argv[0]=demo
+argv[0]=Arguments
 argv[1]=one
 argv[2]=two
 argv[3]=three
